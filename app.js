@@ -59,16 +59,10 @@ app.get('/search/:sugg', async (req, res) => {
     act_url = act_url.replace("${sugg}", sugg);
     axios.get(act_url).then((response) => {
         const data = response.data;
-        let str = "";
-        let str2 = "";
-        let img_url = process.env['HEADER_IMG_URL'];
+        let img_url = "";
         for (x of data) {
-            str = x.img;
-            str = str.slice(str.indexOf("apps/") + 5, str.indexOf("/capsule"));
-            str2 = x.img;
-            str2 = str2.slice(str2.indexOf("?t=") + 3);
-            img_url = img_url.replace("${str}", str);
-            img_url = img_url.replace("${str2}", str2);
+            img_url = x.img;
+            img_url = img_url.replace("capsule_sm_120", "header");
             x.img = img_url;
         }
         res.send(data);
