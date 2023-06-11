@@ -277,7 +277,7 @@ app.get('/single_game/:id', async (req, res) => {
 });
 
 //reviews games
-app.get('/:id/reviews/:category/:limit', async (req, res) => {
+app.get('/:id/reviews/:category/:limit', (req, res) => {
 
     const id = req.params.id;
     const category = req.params.category;
