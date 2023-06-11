@@ -3,9 +3,10 @@ const app = express();
 const cheerio = require('cheerio');
 const axios = require('axios');
 const dotenv = require('dotenv');
+const { json } = require('stream/consumers');
 dotenv.config();
 const port = process.env['PORT'] || 9330;
-
+// const ref = require('ref');
 // get pages 
 app.get('/page/:page_no', async (req, res) => {
     const page_no = req.params.page_no;
@@ -275,6 +276,96 @@ app.get('/single_game/:id', async (req, res) => {
 
 });
 
+//reviews games
+app.get('/:id/reviews/:category/:limit', async (req, res) => {
+
+    const id = req.params.id;
+    const category = req.params.category;
+    const limit = req.params.limit;
+
+    // actual url 
+    let review_url = process.env['REVIEWS_URL'];
+    review_url = review_url.replace("${env_game_id}", id);
+    review_url = review_url.replace("${env_reviewcategory}", category);
+
+    //direct review url
+    let direct_review_url = process.env['DIRECT_REVIEWS_URL'];
+
+    //array userreviewcursor
+    const array_userreviewcursor = JSON.parse(process.env['ARRAY_USERREVIEWSCURSOR']);
+
+    //endpoints
+    let endpoints = [review_url];
+
+    //check the limit 
+    if (limit > 10 && limit < 100) {
+        for (var i = 2; i <= Math.ceil((Number(limit) / 10)); i++) {
+            let env_dir_rev_url = direct_review_url;
+            env_dir_rev_url = env_dir_rev_url.replace(/\${env_reviewpageno}/g, i).replace(/\${env_reviewcategory}/g, category).replace("${env_userreviewsoffset}", (i - 1) * 10).replace("${env_game_id}", id).replace("${env_userreviewcursor}", array_userreviewcursor[i - 2]);
+
+            endpoints.push(env_dir_rev_url);
+        }
+    }
+    else {
+        for (var i = 2; i <= 10; i++) {
+            let env_dir_rev_url = direct_review_url;
+            env_dir_rev_url = env_dir_rev_url.replace(/\${env_reviewpageno}/g, i).replace(/\${env_reviewcategory}/g, category).replace("${env_userreviewsoffset}", (i - 1) * 10).replace("${env_game_id}", id).replace("${env_userreviewcursor}", array_userreviewcursor[i - 2]);
+
+            endpoints.push(env_dir_rev_url);
+        }
+    }
+
+    //start requesting
+    axios.all(endpoints.map(async (endpoint) => {
+        let get_reviews = [];
+        await axios.get(endpoint).then((response) => {
+            const html = response.data;
+            const $ = cheerio.load(html);
+            let all_reviews = [];
+            $("div.apphub_Card").each(function () {
+                let obj_review = {};
+                $(this).after("div.apphub_CardContentMain").map(function (i, el) {
+                    let title = $(el).find(".title").text();
+                    let clone_content = $(el).find("div.apphub_UserReviewCardContent > div.apphub_CardTextContent").clone();
+                    clone_content.children().remove();
+                    let content = clone_content.text().trim();
+                    let date = $(el).find("div.apphub_UserReviewCardContent > div.apphub_CardTextContent > div.date_posted").text().trim();
+                    obj_review.title = title;
+                    obj_review.date = date;
+                    obj_review.content = content;
+                });
+                $(this).after("div.apphub_CardContentAuthorBlock").map(function (i, el) {
+                    let user_profile = $(el).find("div.apphub_friend_block_container > div > a > div.appHubIconHolder > img").attr("src");
+                    if (user_profile != undefined) {
+                        user_profile = user_profile.replace(".jpg", "_full.jpg");
+                    }
+                    let user_name = $(el).find("div.apphub_friend_block_container > div > div.apphub_CardContentAuthorName > a:nth-child(2)").text();
+                    obj_review.user_profile = user_profile;
+                    obj_review.user_name = user_name;
+                });
+                get_reviews.push(obj_review);
+            });
+        });
+        return get_reviews;
+    }
+    )).then((data) => {
+        const final_data = [];
+        for (x of data) {
+            final_data.push(...x);
+        }
+        res.send(final_data);
+        res.end();
+    }).catch((err) => {
+        console.error(err);
+        res.end();
+    });
+
+
+
+});
+
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });
+
+
