@@ -393,7 +393,7 @@ app.get('/:id/news/:category/:limit', async (req, res) => {
     }
     else {
         for (var i = 2; i <= 10; i++) {
-            let env_dir_rev_url = direct_review_url;
+            let env_dir_rev_url = direct_news_url;
             env_dir_rev_url = env_dir_rev_url.replace(/\${env_newspageno}/g, i).replace(/\${env_newscategory}/g, category).replace("${env_announcementsoffset}", (i - 1) * 10).replace("${env_game_id}", id);
 
             endpoints.push(env_dir_rev_url);
@@ -451,8 +451,83 @@ app.get('/:id/news/:category/:limit', async (req, res) => {
 
 });
 
+// game screenshots 
+app.get('/:id/screenshots/:limit', async (req, res) => {
 
+    const id = req.params.id;
+    const limit = req.params.limit;
 
+    // actual url 
+    let screenshot_url = process.env['SCREENSHOTS_URL'];
+    screenshot_url = screenshot_url.replace("${env_game_id}", id);
+
+    //direct review url
+    let direct_screenshot_url = process.env['DIRECT_SCREENSHOTS_URL'];
+
+    //endpoints
+    let endpoints = [screenshot_url];
+
+    //check the limit 
+    if (limit > 10 && limit < 100) {
+        for (var i = 2; i <= Math.ceil((Number(limit) / 10)); i++) {
+            let env_dir_rev_url = direct_screenshot_url;
+            env_dir_rev_url = env_dir_rev_url.replace(/\${env_screenshotspageno}/g, i).replace("${env_game_id}", id);
+
+            endpoints.push(env_dir_rev_url);
+        }
+    }
+    else {
+        for (var i = 2; i <= 10; i++) {
+            let env_dir_rev_url = direct_screenshot_url;
+            env_dir_rev_url = env_dir_rev_url.replace(/\${env_screenshotspageno}/g, i).replace("${env_game_id}", id);
+
+            endpoints.push(env_dir_rev_url);
+        }
+    }
+    //start requesting
+    axios.all(endpoints.map(async (endpoint) => {
+        let get_reviews = [];
+        await axios.get(endpoint).then((response) => {
+            const html = response.data;
+            const $ = cheerio.load(html);
+            $("div.apphub_Card > div.apphub_CardContentClickable > div.apphub_CardContentPreviewImageBorder > div.apphub_CardContentMain").map(function (i, el) {
+                let img = $(el).find("img.apphub_CardContentPreviewImage").attr("src");
+                get_reviews.push(img);
+            });
+        })
+        return get_reviews;
+    })).then((data) => {
+        const final_data = [];
+        for (x of data) {
+            final_data.push(...x);
+        }
+        res.send(final_data);
+        res.end();
+    }).catch((err) => {
+        console.error(err);
+        res.end();
+    });
+
+});
+
+//test screenshot endpoints
+app.get('/test_screenshots', (req, res) => {
+    const url = "https://steamcommunity.com/app/730/homecontent/?userreviewsoffset=0&p=3&workshopitemspage=3&readytouseitemspage=3&mtxitemspage=3&itemspage=3&screenshotspage=3&videospage=3&artpage=3&allguidepage=3&webguidepage=3&integratedguidepage=3&discussionspage=3&numperpage=10&browsefilter=toprated&browsefilter=toprated&appid=730&appHubSubSection=2&appHubSubSection=2&l=english&filterLanguage=default&searchText=&maxInappropriateScore=50&forceanon=1"
+    axios.get(url).then((response) => {
+        const html = response.data;
+        const $ = cheerio.load(html);
+        let get_reviews = [];
+        $("div.apphub_Card > div.apphub_CardContentClickable > div.apphub_CardContentPreviewImageBorder > div.apphub_CardContentMain").map(function (i, el) {
+            let img = $(el).find("img.apphub_CardContentPreviewImage").attr("src");
+            get_reviews.push(img);
+        });
+        res.send(get_reviews);
+        res.end();
+    }).catch(() => {
+        res.send("something went wrong !");
+        res.end();
+    });
+});
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });
