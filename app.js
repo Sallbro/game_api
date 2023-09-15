@@ -510,26 +510,70 @@ app.get('/:id/screenshots/:limit', async (req, res) => {
 
 });
 
-//test screenshot endpoints
-app.get('/test_screenshots', (req, res) => {
-    const url = "https://steamcommunity.com/app/730/homecontent/?userreviewsoffset=0&p=3&workshopitemspage=3&readytouseitemspage=3&mtxitemspage=3&itemspage=3&screenshotspage=3&videospage=3&artpage=3&allguidepage=3&webguidepage=3&integratedguidepage=3&discussionspage=3&numperpage=10&browsefilter=toprated&browsefilter=toprated&appid=730&appHubSubSection=2&appHubSubSection=2&l=english&filterLanguage=default&searchText=&maxInappropriateScore=50&forceanon=1"
-    axios.get(url).then((response) => {
+// get free to play games 
+app.get('/free_to_play/:folio', async (req, res) => {
+    console.log(req.params.folio);
+    const page_no = req.params.page_no;
+    let act_url = "https://store.steampowered.com/genre/Free%20to%20Play/?offset=12";
+    // act_url = act_url.replace("${page_no}", page_no);
+    axios.get(act_url).then((response) => {
+        console.log("response");
         const html = response.data;
         const $ = cheerio.load(html);
-        let get_reviews = [];
-        $("div.apphub_Card > div.apphub_CardContentClickable > div.apphub_CardContentPreviewImageBorder > div.apphub_CardContentMain").map(function (i, el) {
-            let img = $(el).find("img.apphub_CardContentPreviewImage").attr("src");
-            get_reviews.push(img);
+        console.log($.html());
+        const pages = [];
+        let id = "";
+        let optional_id = "";
+        console.log("start");
+
+        console.log("in1");
+        $("div.facetedbrowse_FacetedBrowseInnerCtn_hWbTI > div").find("div.salepreviewwidgets_SaleItemBrowserRow_y9MSd").map(function (i, e) {
+            console.log("in");
+            const folio_instance = {};
+            // if [appid] not present than find [data-ds-bundleid]
+            id = $(e).attr("data-ds-appid");
+            folio_instance.id = id;
+            $(e).find("div.salepreviewwidgets_StoreSaleWidgetRight_1lRFu").map(function (i, e) {
+                console.log("name:", $(e).find("div.salepreviewwidgets_TitleCtn_1F4bc > a > div").text());
+                folio_instance.name = $(e).find("div.salepreviewwidgets_TitleCtn_1F4bc > a > div").text();
+                folio_instance.release_date = $(e).find("div.col.search_released.responsive_secondrow").text();
+
+                // if discount price is present 
+                if ($(e).has("div.col.search_price_discount_combined.responsive_secondrow > div.col.search_price.responsive_secondrow > span > strike").attr() != undefined) {
+                    folio_instance.price = $(e).find("div.col.search_price_discount_combined.responsive_secondrow > div.col.search_price.responsive_secondrow > br")[0].nextSibling.nodeValue;
+                }
+                else {
+                    folio_instance.price = $(e).find("div.col.search_price_discount_combined.responsive_secondrow > div.col.search_price.responsive_secondrow").text().trim();
+                }
+            })
+
+            optional_id = $(e).find("div.col.search_capsule > img").attr("src");
+            optional_id = optional_id.slice(optional_id.indexOf("?t=") + 3);
+            folio_instance.img = `https://cdn.akamai.steamstatic.com/steam/apps/${id}/header.jpg?t=${optional_id}`;
+            pages.push(folio_instance);
         });
-        res.send(get_reviews);
+        res.send(pages);
         res.end();
-    }).catch(() => {
-        res.send("something went wrong !");
+    }).catch((err) => {
+        console.error("err-", err);
         res.end();
     });
+
+
 });
+
+app.get('/utf', async (req, res) => {
+    const act_url = "https://api.steampowered.com/IStoreBrowseService/GetItems/v1?origin=https:%2F%2Fstore.steampowered.com&input_protobuf_encoded=CgQIuJ0XCgQI6NYbCgQIjvUjCgQIosAuCgQI6uQuCgQI%2BNpLCgQIqLhTCgQI7IxjCgQI6ppjCgQIzrt4CgUI1t2CAQoFCIKiiwESDwoHZW5nbGlzaBoCSU4gARoSCAEQARgBKAEwAUAUSAFQAVgB";
+    axios.get(act_url).then((response) => {
+        // response.body.toString('utf-8');
+        console.log(response.data.toString('utf-8'));
+        res.send(response.data);
+    }).catch((err) => {
+        res.send("err:", err);
+    });
+
+})
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });
-
 
