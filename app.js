@@ -8,6 +8,15 @@ dotenv.config();
 const port = process.env['PORT'] || 9330;
 // const ref = require('ref');
 // get pages 
+app.get('/', (req, res) => {
+    try {
+        res.status(200).send("working fine !...");
+    }
+    catch (err) {
+        res.status(500).send("something went wrong !...");
+    }
+});
+
 app.get('/page/:page_no', async (req, res) => {
     const page_no = req.params.page_no;
     let act_url = process.env['GET_PAGE_URL'];
@@ -573,6 +582,7 @@ app.get('/utf', async (req, res) => {
     });
 
 })
+
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });
