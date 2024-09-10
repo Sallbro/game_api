@@ -17,6 +17,7 @@ app.get('/', (req, res) => {
     }
 });
 
+// page no 
 app.get('/page/:page_no', async (req, res) => {
     const page_no = req.params.page_no;
     let act_url = process.env['GET_PAGE_URL'];
@@ -493,6 +494,7 @@ app.get('/:id/screenshots/:limit', async (req, res) => {
             endpoints.push(env_dir_rev_url);
         }
     }
+
     //start requesting
     axios.all(endpoints.map(async (endpoint) => {
         let get_reviews = [];
@@ -511,6 +513,205 @@ app.get('/:id/screenshots/:limit', async (req, res) => {
             final_data.push(...x);
         }
         res.send(final_data);
+        res.end();
+    }).catch((err) => {
+        console.error(err);
+        res.end();
+    });
+
+});
+
+// game videos
+app.get('/:id/videos/:limit', async (req, res) => {
+
+    const id = req.params.id;
+    const limit = req.params.limit;
+
+    // actual url 
+    let screenshot_url = process.env['VIDEOS_URL'];
+    screenshot_url = screenshot_url.replace("${env_game_id}", id);
+
+    //direct review url
+    let direct_screenshot_url = process.env['DIRECT_VIDEOS_URL'];
+
+    //endpoints
+    let endpoints = [screenshot_url];
+
+    //check the limit 
+    if (limit > 10 && limit < 100) {
+        for (var i = 2; i <= Math.ceil((Number(limit) / 10)); i++) {
+            let env_dir_rev_url = direct_screenshot_url;
+            env_dir_rev_url = env_dir_rev_url.replace(/\${env_videospageno}/g, i).replace("${env_game_id}", id);
+
+            endpoints.push(env_dir_rev_url);
+        }
+    }
+    else {
+        for (var i = 2; i <= 10; i++) {
+            let env_dir_rev_url = direct_screenshot_url;
+            env_dir_rev_url = env_dir_rev_url.replace(/\${env_videospageno}/g, i).replace("${env_game_id}", id);
+
+            endpoints.push(env_dir_rev_url);
+        }
+    }
+
+    //start requesting
+    axios.all(endpoints.map(async (endpoint) => {
+        let get_videos = [];
+
+        await axios.get(endpoint).then((response) => {
+            const html = response.data;
+            const $ = cheerio.load(html);
+            const regex_video = /\/vi\/([^\/]+)\//;
+
+            $("div.apphub_Card > div.apphub_CardContentClickable > div.apphub_CardContentPreviewImageBorder > div.apphub_CardContentMain").map(function (i, el) {
+                let img = $(el).find("img.apphub_CardContentPreviewImage").attr("src");
+                get_videos.push("https://www.youtube.com/watch?v=" + img.match(regex_video)[1]);
+            });
+        })
+        return get_videos;
+    })).then((data) => {
+        const final_data = [];
+        for (x of data) {
+            final_data.push(...x);
+        }
+        res.send(final_data);
+        res.end();
+    }).catch((err) => {
+        console.error(err);
+        res.end();
+    });
+
+});
+
+// artwork
+app.get('/:id/artwork/:limit', async (req, res) => {
+
+    const id = req.params.id;
+    const limit = req.params.limit;
+
+    // actual url 
+    let artwork_url = process.env['ARTWORK_URL'];
+    artwork_url = artwork_url.replace(/\${env_game_id}/g, id);
+    artwork_url = artwork_url.replace(/\${env_artworkpageno}/g, 1);
+    artwork_url = artwork_url.replace(/\${env_artwork_limit}/g, limit || 10);
+
+    //start requesting
+    await axios.get(artwork_url).then((response) => {
+        let get_broadcast = [];
+        const html = response.data;
+        const $ = cheerio.load(html);
+
+        $("div.apphub_Card > div.apphub_CardContentClickable > div.apphub_CardContentPreviewImageBorder > div.apphub_CardContentMain").map(function (i, el) {
+            let img = $(el).find("img").attr("src");
+            get_broadcast.push(img);
+        });
+        res.send(get_broadcast);
+        res.end();
+    }).catch((err) => {
+        console.error(err);
+        res.end();
+    });
+
+});
+// broadcasts
+app.get('/:id/broadcasts/:limit', async (req, res) => {
+
+    const id = req.params.id;
+    const limit = req.params.limit;
+
+    // actual url 
+    let broadcast_url = process.env['BROADCAST_URL'];
+    broadcast_url = broadcast_url.replace("${env_game_id}", id);
+    broadcast_url = broadcast_url.replace("${env_broadcastpageno}", 1);
+    broadcast_url = broadcast_url.replace("${env_broadcast_limit}", limit || 10);
+
+    //start requesting
+    await axios.get(broadcast_url).then((response) => {
+        let get_broadcast = [];
+        const html = response.data;
+        const $ = cheerio.load(html);
+
+        $("div.Broadcast_Card").map(function (i, el) {
+            let img = $(el).find("a").attr("href");
+            get_broadcast.push(img);
+        });
+        res.send(get_broadcast);
+        res.end();
+    }).catch((err) => {
+        console.error(err);
+        res.end();
+    });
+
+});
+
+// guides
+app.get('/:id/guides/:page_no', async (req, res) => {
+
+    const id = req.params.id;
+    const page_no = req.params.page_no;
+
+    // actual url 
+    let guides_url = process.env['GUIDE_URL'];
+    guides_url = guides_url.replace("${env_game_id}", id);
+    guides_url = guides_url.replace("${env_guide_pageno}", page_no || 1);
+
+    //start requesting
+    await axios.get(guides_url).then((response) => {
+        let get_guides = [];
+        const html = response.data;
+        const $ = cheerio.load(html);
+
+        $("div.workshopItemCollectionContainer").map(function (i, el) {
+            const guide = {};
+            const guide_id = $(el).find("a").attr("data-publishedfileid");
+            guide.guide_id = guide_id;
+
+            const guide_title = $(el).addClass("a > div.workshopItemDetails > div.workshopItemTitle").text().trim().replace(/\n/g, "").replace(/\t/g, "");
+            guide.title = guide_title;
+
+            const guide_shortdesc = $(el).addClass("a > div.workshopItemDetails > div.workshopItemShortDesc").text().trim().replace(/\n/g, "").replace(/\t/g, "");
+            guide.short_desc = guide_shortdesc;
+
+            get_guides.push(guide);
+        });
+        res.send(get_guides);
+        res.end();
+    }).catch((err) => {
+        console.error(err);
+        res.end();
+    });
+
+});
+
+// single guide by guide id
+app.get('/guides/:guide_id', async (req, res) => {
+
+    const guide_id = req.params.guide_id;
+
+    // actual url 
+    let guides_url = process.env['SINGLE_GUIDE_URL'];
+    guides_url = guides_url.replace("${env_guide_id}", guide_id);
+
+    //start requesting
+    await axios.get(guides_url).then((response) => {
+        let get_guide = {};
+        const html = response.data;
+        const $ = cheerio.load(html);
+        const postdate = $("div.rightDetailsBlock > div.detailsStatsContainerRight > div.detailsStatRight").text();
+        const author = $("div.guideTopContent > div.guideAuthors").text();
+        const title = $("div.guideTopContent > div.workshopItemTitle").text();
+        const short_desc = $("div.guideTopContent > div.guideTopDescription").text();
+        const full_desc = $("div.guide > div.subSection > div.subSectionDesc > b").html().replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '');
+        
+        get_guide.guide_id = guide_id;
+        get_guide.postdate = postdate;
+        get_guide.author = author;
+        get_guide.title = title;
+        get_guide.short_desc = short_desc;
+        get_guide.full_desc = full_desc;
+
+        res.send(get_guide);
         res.end();
     }).catch((err) => {
         console.error(err);
