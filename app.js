@@ -859,11 +859,13 @@ app.get('/external_links/:id', async (req, res) => {
 });
 
 //reviews games
-app.get('/:id/reviews/:category/:limit', (req, res) => {
+app.get('/reviews/:category/:id', (req, res) => {
 
     const id = req.params.id;
     const category = req.params.category;
-    const limit = req.params.limit;
+    const limit = req.query.limit;
+    const offset = Math.ceil(Number(req.query.offset) / 10) > 0 ? Math.ceil(Number(req.query.offset) / 10) : 0;
+
 
     // actual url 
     let review_url = process.env['REVIEWS_URL'];
@@ -881,7 +883,7 @@ app.get('/:id/reviews/:category/:limit', (req, res) => {
 
     //check the limit 
     if (limit > 10 && limit < 100) {
-        for (var i = 2; i <= Math.ceil((Number(limit) / 10)); i++) {
+        for (var i = 1 + offset; i <= Math.ceil((Number(limit) / 10)) + offset; i++) {
             let env_dir_rev_url = direct_review_url;
             env_dir_rev_url = env_dir_rev_url.replace(/\${env_reviewpageno}/g, i).replace(/\${env_reviewcategory}/g, category).replace("${env_userreviewsoffset}", (i - 1) * 10).replace("${env_game_id}", id).replace("${env_userreviewcursor}", array_userreviewcursor[i - 2]);
 
@@ -947,11 +949,13 @@ app.get('/:id/reviews/:category/:limit', (req, res) => {
 });
 
 // game news 
-app.get('/:id/news/:category/:limit', async (req, res) => {
+app.get('/news/:category/:id', async (req, res) => {
 
     const id = req.params.id;
     const category = req.params.category;
-    const limit = req.params.limit;
+    const limit = req.query.limit;
+    const offset = Math.ceil(Number(req.query.offset) / 10) > 0 ? Math.ceil(Number(req.query.offset) / 10) : 0;
+
 
     // actual url 
     let news_url = process.env['NEWS_URL'];
@@ -966,7 +970,7 @@ app.get('/:id/news/:category/:limit', async (req, res) => {
 
     //check the limit 
     if (limit > 10 && limit < 100) {
-        for (var i = 2; i <= Math.ceil((Number(limit) / 10)); i++) {
+        for (var i = 1+offset; i <= Math.ceil((Number(limit) / 10))+offset; i++) {
             let env_dir_rev_url = direct_news_url;
             env_dir_rev_url = env_dir_rev_url.replace(/\${env_newspageno}/g, i).replace(/\${env_newscategory}/g, category).replace("${env_announcementsoffset}", (i - 1) * 10).replace("${env_game_id}", id);
 
@@ -974,7 +978,7 @@ app.get('/:id/news/:category/:limit', async (req, res) => {
         }
     }
     else {
-        for (var i = 2; i <= 10; i++) {
+        for (var i = 1; i <= 10; i++) {
             let env_dir_rev_url = direct_news_url;
             env_dir_rev_url = env_dir_rev_url.replace(/\${env_newspageno}/g, i).replace(/\${env_newscategory}/g, category).replace("${env_announcementsoffset}", (i - 1) * 10).replace("${env_game_id}", id);
 
@@ -1164,7 +1168,7 @@ app.get('/artwork/:id', async (req, res) => {
     // actual url 
     let artwork_url = process.env['ARTWORK_URL'];
     artwork_url = artwork_url.replace(/\${env_game_id}/g, id);
-    artwork_url = artwork_url.replace(/\${env_artworkpageno}/g, 1+offset);
+    artwork_url = artwork_url.replace(/\${env_artworkpageno}/g, 1 + offset);
     artwork_url = artwork_url.replace(/\${env_artwork_limit}/g, limit || 10);
 
     //start requesting
@@ -1197,7 +1201,7 @@ app.get('/broadcasts/:id', async (req, res) => {
     // actual url 
     let broadcast_url = process.env['BROADCAST_URL'];
     broadcast_url = broadcast_url.replace("${env_game_id}", id);
-    broadcast_url = broadcast_url.replace("${env_broadcastpageno}", 1+offset);
+    broadcast_url = broadcast_url.replace("${env_broadcastpageno}", 1 + offset);
     broadcast_url = broadcast_url.replace("${env_broadcast_limit}", limit || 10);
 
     //start requesting
@@ -1220,7 +1224,7 @@ app.get('/broadcasts/:id', async (req, res) => {
 });
 
 // guides
-app.get('/:id/guides/:page_no', async (req, res) => {
+app.get('/guides/:id/:page_no', async (req, res) => {
 
     const id = req.params.id;
     const page_no = req.params.page_no;
@@ -1259,7 +1263,7 @@ app.get('/:id/guides/:page_no', async (req, res) => {
 });
 
 // single guide by guide id
-app.get('/guides/:guide_id', async (req, res) => {
+app.get('/guide/:guide_id', async (req, res) => {
 
     const guide_id = req.params.guide_id;
 
