@@ -64,8 +64,8 @@ app.get('/page/:page_no', async (req, res) => {
 });
 
 //search for games
-app.get('/search/:sugg', async (req, res) => {
-    const sugg = req.params.sugg;
+app.get('/search', async (req, res) => {
+    const sugg = req.query.sugg;
     let act_url = process.env['GET_SEARCH_URL'];
     act_url = act_url.replace("${sugg}", sugg);
     axios.get(act_url).then((response) => {
@@ -550,8 +550,8 @@ app.get('/dev_details/:id', async (req, res) => {
 
 });
 
-//developer details
-app.get('/dev_details/:id', async (req, res) => {
+//developer name
+app.get('/developer_name/:id', async (req, res) => {
 
     const game_id = req.params.id;
     // actual url 
@@ -571,14 +571,7 @@ app.get('/dev_details/:id', async (req, res) => {
 
         //get dev details
         const developer_name = [];
-        const publisher = [];
-        const franchise = [];
-        const dev_details = {
-            developer_name,
-            publisher,
-            franchise
-        }
-        result.dev_details = dev_details;
+        result.developer_name = developer_name;
         $("#genresAndManufacturer > div.dev_row").map(function (i, e) {
             // get developer_name
             if (i == 0) {
@@ -586,20 +579,9 @@ app.get('/dev_details/:id', async (req, res) => {
                     developer_name.push($(e).text());
                 })
             }
-            // get publisher
-            if (i == 1) {
-                $(e).find("a").map(function (i, e) {
-                    publisher.push($(e).text());
-                })
-            }
-            // get franchise
-            if (i == 2) {
-                $(e).find("a").map(function (i, e) {
-                    franchise.push($(e).text());
-                })
-            }
 
         });
+        result.developer_name = developer_name;
 
         res.status(200).send(result);
         res.end();
@@ -1052,10 +1034,11 @@ app.get('/:id/news/:category/:limit', async (req, res) => {
 });
 
 // game screenshots 
-app.get('/:id/screenshots/:limit', async (req, res) => {
+app.get('/screenshots/:id', async (req, res) => {
 
     const id = req.params.id;
-    const limit = req.params.limit;
+    const limit = req.query.limit;
+    const offset = Math.ceil(Number(req.query.offset) / 10) > 0 ? Math.ceil(Number(req.query.offset) / 10) : 0;
 
     // actual url 
     let screenshot_url = process.env['SCREENSHOTS_URL'];
@@ -1065,24 +1048,21 @@ app.get('/:id/screenshots/:limit', async (req, res) => {
     let direct_screenshot_url = process.env['DIRECT_SCREENSHOTS_URL'];
 
     //endpoints
-    let endpoints = [screenshot_url];
+    let endpoints = [];
 
     //check the limit 
     if (limit > 10 && limit < 100) {
-        for (var i = 2; i <= Math.ceil((Number(limit) / 10)); i++) {
+        for (var i = 1 + offset; i <= Math.ceil((Number(limit) / 10)) + offset; i++) {
             let env_dir_rev_url = direct_screenshot_url;
             env_dir_rev_url = env_dir_rev_url.replace(/\${env_screenshotspageno}/g, i).replace("${env_game_id}", id);
-
             endpoints.push(env_dir_rev_url);
         }
     }
     else {
-        for (var i = 2; i <= 10; i++) {
-            let env_dir_rev_url = direct_screenshot_url;
-            env_dir_rev_url = env_dir_rev_url.replace(/\${env_screenshotspageno}/g, i).replace("${env_game_id}", id);
+        let env_dir_rev_url = direct_screenshot_url;
+        env_dir_rev_url = env_dir_rev_url.replace(/\${env_screenshotspageno}/g, 1).replace("${env_game_id}", id);
 
-            endpoints.push(env_dir_rev_url);
-        }
+        endpoints.push(env_dir_rev_url);
     }
 
     //start requesting
@@ -1112,10 +1092,11 @@ app.get('/:id/screenshots/:limit', async (req, res) => {
 });
 
 // game videos
-app.get('/:id/videos/:limit', async (req, res) => {
+app.get('/videos/:id', async (req, res) => {
 
     const id = req.params.id;
-    const limit = req.params.limit;
+    const limit = req.query.limit;
+    const offset = Math.ceil(Number(req.query.offset) / 10) > 0 ? Math.ceil(Number(req.query.offset) / 10) : 0;
 
     // actual url 
     let screenshot_url = process.env['VIDEOS_URL'];
@@ -1129,7 +1110,7 @@ app.get('/:id/videos/:limit', async (req, res) => {
 
     //check the limit 
     if (limit > 10 && limit < 100) {
-        for (var i = 2; i <= Math.ceil((Number(limit) / 10)); i++) {
+        for (var i = 1 + offset; i <= Math.ceil((Number(limit) / 10)) + offset; i++) {
             let env_dir_rev_url = direct_screenshot_url;
             env_dir_rev_url = env_dir_rev_url.replace(/\${env_videospageno}/g, i).replace("${env_game_id}", id);
 
@@ -1137,12 +1118,10 @@ app.get('/:id/videos/:limit', async (req, res) => {
         }
     }
     else {
-        for (var i = 2; i <= 10; i++) {
-            let env_dir_rev_url = direct_screenshot_url;
-            env_dir_rev_url = env_dir_rev_url.replace(/\${env_videospageno}/g, i).replace("${env_game_id}", id);
+        let env_dir_rev_url = direct_screenshot_url;
+        env_dir_rev_url = env_dir_rev_url.replace(/\${env_videospageno}/g, i).replace("${env_game_id}", id);
 
-            endpoints.push(env_dir_rev_url);
-        }
+        endpoints.push(env_dir_rev_url);
     }
 
     //start requesting
@@ -1175,15 +1154,17 @@ app.get('/:id/videos/:limit', async (req, res) => {
 });
 
 // artwork
-app.get('/:id/artwork/:limit', async (req, res) => {
+app.get('/artwork/:id', async (req, res) => {
 
     const id = req.params.id;
-    const limit = req.params.limit;
+    const limit = req.query.limit;
+    const offset = Math.ceil(Number(req.query.offset) / 10) > 0 ? Math.ceil(Number(req.query.offset) / 10) : 0;
+
 
     // actual url 
     let artwork_url = process.env['ARTWORK_URL'];
     artwork_url = artwork_url.replace(/\${env_game_id}/g, id);
-    artwork_url = artwork_url.replace(/\${env_artworkpageno}/g, 1);
+    artwork_url = artwork_url.replace(/\${env_artworkpageno}/g, 1+offset);
     artwork_url = artwork_url.replace(/\${env_artwork_limit}/g, limit || 10);
 
     //start requesting
@@ -1204,16 +1185,19 @@ app.get('/:id/artwork/:limit', async (req, res) => {
     });
 
 });
+
 // broadcasts
-app.get('/:id/broadcasts/:limit', async (req, res) => {
+app.get('/broadcasts/:id', async (req, res) => {
 
     const id = req.params.id;
-    const limit = req.params.limit;
+    const limit = req.query.limit;
+    const offset = Math.ceil(Number(req.query.offset) / 10) > 0 ? Math.ceil(Number(req.query.offset) / 10) : 0;
+
 
     // actual url 
     let broadcast_url = process.env['BROADCAST_URL'];
     broadcast_url = broadcast_url.replace("${env_game_id}", id);
-    broadcast_url = broadcast_url.replace("${env_broadcastpageno}", 1);
+    broadcast_url = broadcast_url.replace("${env_broadcastpageno}", 1+offset);
     broadcast_url = broadcast_url.replace("${env_broadcast_limit}", limit || 10);
 
     //start requesting
